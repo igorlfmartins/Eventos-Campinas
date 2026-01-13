@@ -15,7 +15,9 @@ dotenv.config();
 const app = express();
 const PORT = 3001;
 
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false, // Desabilitando CSP estrito para evitar bloqueios de CDN/Scripts
+}));
 app.use(cors({ origin: 'http://localhost:5173' }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'dist')));
@@ -26,8 +28,8 @@ const server = app.listen(PORT, () => {
 server.setTimeout(300000); // 5 minutos timeout
 
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, 
-  max: 300, 
+  windowMs: 15 * 60 * 1000,
+  max: 300,
   message: 'Muitas requisições. Aguarde.'
 });
 app.use(limiter);
@@ -40,15 +42,27 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 // Helper para timeout em Promises
 const withTimeout = (promise, ms) => {
-    let timeoutId;
-    const timeoutPromise = new Promise((_, reject) => {
-        timeoutId = setTimeout(() => reject(new Error('Timeout Interno IA')), ms);
-    });
-    return Promise.race([
-        promise.then(res => { clearTimeout(timeoutId); return res; }),
-        timeoutPromise
-    ]);
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error('Timeout Interno IA')), ms);
+  });
+  return Promise.race([
+    promise.then(res => { clearTimeout(timeoutId); return res; }),
+    timeoutPromise
+  ]);
 };
+
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    env: {
+      hasGemini: !!process.env.API_KEY,
+      hasSerper: !!process.env.SERPER_API_KEY,
+      hasFirecrawl: !!process.env.FIRECRAWL_API_KEY
+    }
+  });
+});
 
 app.post('/api/search-source', async (req, res) => {
   const { url, sourceName, mode = 'scrape' } = req.body;
@@ -61,7 +75,7 @@ app.post('/api/search-source', async (req, res) => {
 
   try {
     let contentToAnalyze = "";
-    
+
     // --- MODO 1: GOOGLE SEARCH (SERPER) ---
     if (mode === 'search') {
       if (!process.env.SERPER_API_KEY) return res.json({ events: [], warning: "Sem chave Serper" });
@@ -77,12 +91,12 @@ app.post('/api/search-source', async (req, res) => {
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            q: url, 
+            q: url,
             location: "Campinas, Sao Paulo, Brazil",
             gl: "br",
             hl: "pt-br",
-            num: 20, 
-            tbs: "qdr:m" 
+            num: 20,
+            tbs: "qdr:m"
           }),
           signal: controller.signal
         });
@@ -97,12 +111,12 @@ app.post('/api/search-source', async (req, res) => {
         console.warn(`⚠️ Serper falhou: ${err.message}`);
         return res.json({ events: [], warning: "Timeout busca." });
       }
-    } 
+    }
     // --- MODO 2: SCRAPE (FIRECRAWL) ---
     else {
       // Timeout Firecrawl: 20s (ainda mais curto para não travar fila)
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 20000); 
+      const timeoutId = setTimeout(() => controller.abort(), 20000);
 
       try {
         const firecrawlResp = await fetch('https://api.firecrawl.dev/v2/scrape', {
@@ -114,7 +128,7 @@ app.post('/api/search-source', async (req, res) => {
           body: JSON.stringify({
             url: url,
             formats: ['markdown'],
-            onlyMainContent: true 
+            onlyMainContent: true
           }),
           signal: controller.signal
         });
@@ -138,7 +152,7 @@ app.post('/api/search-source', async (req, res) => {
     // --- GEMINI ---
     const todayStr = new Date().toLocaleDateString('pt-BR');
     // Limita contexto para 25k chars para resposta rápida
-    const limitedContent = contentToAnalyze.substring(0, 25000); 
+    const limitedContent = contentToAnalyze.substring(0, 25000);
 
     const prompt = `
       Contexto: Extração de Eventos B2B em Campinas/SP.
@@ -171,7 +185,7 @@ app.post('/api/search-source', async (req, res) => {
 
   } catch (error) {
     console.error(`Erro geral em ${sourceName}:`, error.message);
-    res.json({ events: [], error: error.message }); 
+    res.json({ events: [], error: error.message });
   }
 });
 

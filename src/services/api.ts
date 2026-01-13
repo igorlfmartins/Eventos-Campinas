@@ -3,10 +3,10 @@ import { B2BEvent } from '../types';
 const API_URL = '/api';
 
 export const fetchEventsFromSource = async (
-  sourceName: string, 
-  url: string, 
+  sourceName: string,
+  url: string,
   mode: 'scrape' | 'search' = 'scrape'
-): Promise<B2BEvent[]> => {
+): Promise<{ events: B2BEvent[], warning?: string, error?: string }> => {
   // Timeout de segurança no Frontend (40s) para garantir que a fila ande
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 40000);
@@ -26,10 +26,14 @@ export const fetchEventsFromSource = async (
     }
 
     const data = await response.json();
-    return data.events || [];
-  } catch (error) {
+    return {
+      events: data.events || [],
+      warning: data.warning,
+      error: data.error
+    };
+  } catch (error: any) {
     clearTimeout(timeoutId);
     console.error(`Erro ao buscar de ${sourceName}:`, error);
-    return []; // Retorna vazio em caso de erro para não travar a UI
+    return { events: [], error: error.message };
   }
 };
