@@ -18,7 +18,17 @@ const PORT = 3001;
 app.use(helmet({
   contentSecurityPolicy: false, // Desabilitando CSP estrito para evitar bloqueios de CDN/Scripts
 }));
-app.use(cors({ origin: 'http://localhost:5173' }));
+app.use(cors({
+  origin: (origin, callback) => {
+    const allowedOrigins = ['http://localhost:5173', 'https://eventos-b2b-campinas.up.railway.app'];
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`Bloqueado por CORS: ${origin}`);
+      callback(null, false); // Não gera erro 500, apenas bloqueia
+    }
+  }
+}));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'dist')));
 
