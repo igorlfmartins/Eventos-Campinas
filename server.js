@@ -160,8 +160,11 @@ app.post('/api/search-source', async (req, res) => {
       }
     }
 
+    // Log para debug
+    console.log(`📄 ${sourceName}: Conteúdo recebido com ${contentToAnalyze.length} caracteres.`);
+
     if (!contentToAnalyze || contentToAnalyze.length < 50) {
-      return res.json({ events: [], warning: "Conteúdo vazio" });
+      return res.json({ events: [], warning: "Conteúdo vazio ou insuficiente." });
     }
 
     // --- GEMINI ---
@@ -170,16 +173,25 @@ app.post('/api/search-source', async (req, res) => {
     const limitedContent = contentToAnalyze.substring(0, 25000);
 
     const prompt = `
-      Contexto: Extração de Eventos B2B em Campinas/SP.
+      Contexto: Sou um curador de eventos B2B e Networking em Campinas/SP.
       Hoje: ${todayStr}.
       Fonte: ${sourceName} (${mode}).
       
-      Extraia eventos futuros de NEGÓCIOS (Palestras, Workshops, Networking).
-      Ignore shows/lazer.
+      OBJETIVO: Extrair QUALQUER evento que pareça uma oportunidade de conexão profissional, aprendizado ou negócios.
       
-      JSON Saída: [{ "title": "...", "date": "DD/MM", "location": "...", "link": "...", "analysis": "...", "opportunity": "..." }]
+      REGRAS:
+      1. Priorize: Palestras, Workshops, Feiras, Congressos, Cafés de Negócios.
+      2. INCLUA eventos de tecnologia, inovação, startups, marketing, vendas.
+      3. SEJA MENOS CRITERIOSO: Na dúvida, inclua o evento e marque oportunidade como "Networking Geral".
+      4. IGNORE APENAS: Shows de música pura, teatro, stand-up comedy, festas infantis.
+
+      JSON Saída:
+      {
+        "events": [{ "title": "...", "date": "DD/MM", "location": "...", "link": "...", "analysis": "...", "opportunity": "..." }],
+        "debug_summary": "Explique em 1 frase o que encontrou no texto."
+      }
       
-      Texto:
+      Texto para análise:
       ${limitedContent}
     `;
 
@@ -193,10 +205,14 @@ app.post('/api/search-source', async (req, res) => {
     const aiResp = await withTimeout(aiPromise, 25000);
 
     const cleanText = aiResp.text?.replace(/```json/g, '').replace(/```/g, '').trim();
-    const events = JSON.parse(cleanText || "[]");
+    const result = JSON.parse(cleanText || '{ "events": [], "debug_summary": "Erro no parse" }');
 
-    console.log(`✅ ${sourceName}: ${events.length} eventos.`);
-    res.json({ events });
+    // Tratamento para caso a IA devolva array direto ou objeto
+    const events = Array.isArray(result) ? result : (result.events || []);
+    const debugInfo = result.debug_summary || "Sem info";
+
+    console.log(`✅ ${sourceName}: ${events.length} eventos. Debug: ${debugInfo}`);
+    res.json({ events, debug: debugInfo });
 
   } catch (error) {
     console.error(`Erro geral em ${sourceName}:`, error.message);

@@ -56,8 +56,11 @@ function App() {
       try {
         const { events: foundEvents, warning, error } = await fetchEventsFromSource(source.name, source.url, source.mode);
 
-        if (warning) {
-          setWarnings(prev => Array.from(new Set([...prev, `${source.name}: ${warning}`])));
+        const { events: foundEvents, warning, error, debug } = await fetchEventsFromSource(source.name, source.url, source.mode);
+
+        if (warning || debug) {
+          const msg = warning ? `${source.name}: ${warning}` : `${source.name} (Info): ${debug}`;
+          setWarnings(prev => Array.from(new Set([...prev, msg])));
         }
 
         if (error) {

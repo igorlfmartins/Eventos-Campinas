@@ -6,7 +6,7 @@ export const fetchEventsFromSource = async (
   sourceName: string,
   url: string,
   mode: 'scrape' | 'search' = 'scrape'
-): Promise<{ events: B2BEvent[], warning?: string, error?: string }> => {
+): Promise<{ events: B2BEvent[], warning?: string, error?: string, debug?: string }> => {
   // Timeout de segurança no Frontend (40s) para garantir que a fila ande
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 40000);
@@ -29,7 +29,8 @@ export const fetchEventsFromSource = async (
     return {
       events: data.events || [],
       warning: data.warning,
-      error: data.error
+      error: data.error,
+      debug: data.debug
     };
   } catch (error: any) {
     clearTimeout(timeoutId);
