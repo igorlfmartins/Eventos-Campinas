@@ -44,11 +44,16 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-if (!process.env.API_KEY) console.error("⚠️ Falta API_KEY (Gemini)");
-if (!process.env.FIRECRAWL_API_KEY) console.error("⚠️ Falta FIRECRAWL_API_KEY");
-if (!process.env.SERPER_API_KEY) console.error("⚠️ Falta SERPER_API_KEY");
+// Mapeamento flexível para aceitar os nomes que o usuário configurou no Railway
+const GEMINI_KEY = process.env.API_KEY || process.env.GEMINI_API_KEY;
+const FIRECRAWL_KEY = process.env.FIRECRAWL_API_KEY || process.env.VITE_FIRECRAWL_API_KEY;
+const SERPER_KEY = process.env.SERPER_API_KEY || process.env.VITE_SERPER_API_KEY;
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+if (!GEMINI_KEY) console.error("⚠️ Falta API_KEY / GEMINI_API_KEY");
+if (!FIRECRAWL_KEY) console.error("⚠️ Falta FIRECRAWL_API_KEY / VITE_FIRECRAWL_API_KEY");
+if (!SERPER_KEY) console.error("⚠️ Falta SERPER_API_KEY / VITE_SERPER_API_KEY");
+
+const ai = new GoogleGenAI({ apiKey: GEMINI_KEY });
 
 // Helper para timeout em Promises
 const withTimeout = (promise, ms) => {
@@ -67,9 +72,9 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     timestamp: new Date().toISOString(),
     env: {
-      hasGemini: !!process.env.API_KEY,
-      hasSerper: !!process.env.SERPER_API_KEY,
-      hasFirecrawl: !!process.env.FIRECRAWL_API_KEY
+      hasGemini: !!GEMINI_KEY,
+      hasSerper: !!SERPER_KEY,
+      hasFirecrawl: !!FIRECRAWL_KEY
     }
   });
 });
@@ -88,7 +93,7 @@ app.post('/api/search-source', async (req, res) => {
 
     // --- MODO 1: GOOGLE SEARCH (SERPER) ---
     if (mode === 'search') {
-      if (!process.env.SERPER_API_KEY) return res.json({ events: [], warning: "Sem chave Serper" });
+      if (!SERPER_KEY) return res.json({ events: [], warning: "Sem chave Serper" });
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s máx para Serper
@@ -97,7 +102,7 @@ app.post('/api/search-source', async (req, res) => {
         const serperResp = await fetch("https://google.serper.dev/search", {
           method: "POST",
           headers: {
-            "X-API-KEY": process.env.SERPER_API_KEY,
+            "X-API-KEY": SERPER_KEY,
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
@@ -132,7 +137,7 @@ app.post('/api/search-source', async (req, res) => {
         const firecrawlResp = await fetch('https://api.firecrawl.dev/v2/scrape', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${process.env.FIRECRAWL_API_KEY}`,
+            'Authorization': `Bearer ${FIRECRAWL_KEY}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
