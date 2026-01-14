@@ -5,6 +5,7 @@ export interface B2BEvent {
   link: string;
   analysis: string;
   opportunity: string;
+  insuranceRelevance: string;
 }
 
 export type AppStep = 'home' | 'loading' | 'curation' | 'report';

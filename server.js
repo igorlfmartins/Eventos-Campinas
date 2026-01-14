@@ -173,21 +173,17 @@ app.post('/api/search-source', async (req, res) => {
     const limitedContent = contentToAnalyze.substring(0, 25000);
 
     const prompt = `
-      Contexto: Sou um curador de eventos B2B e Networking em Campinas/SP.
+      Contexto: Sou um corretor de seguros focado em prospecção de leads qualificados (Seguros Empresariais, Saúde, Vida e Patrimonial) em Campinas/SP.
       Hoje: ${todayStr} (dia/mês/ano).
       Fonte: ${sourceName} (${mode}).
       
-      OBJETIVO: Extrair APENAS eventos FUTUROS (a partir de hoje, inclusive) que sejam oportunidades de conexão profissional.
-      IMPORTANTE: O ecossistema é fragmentado. Se for notícia, tente achar o link DA INSCRIÇÃO ou DO ORGANIZADOR dentro do texto, não apenas o link da notícia.
+      OBJETIVO: Extrair APENAS eventos FUTUROS que sejam oportunidades para encontrar DECISORES (Donos de empresas, RHs, Gestores) ou pessoas com alto potencial para seguros.
+      IMPORTANTE: Se for notícia, tente achar o link DA INSCRIÇÃO/DETALHES, não apenas a notícia.
 
-      REGRAS DE OURO:
-      1. DATAS: Verifique EXPLICITAMENTE se a data do evento é >= ${todayStr}. SE JÁ PASSOU, DESCARTE IMEDIATAMENTE.
-      2. TIPO: Priorize Palestras, Workshops, Feiras, Congressos, Cafés de Negócios, Happy Hours Corporativos.
-      3. INCLUA: Tecnologia, Inovação, Startups, Marketing, Vendas, Direito, Indústria.
-      4. IMPRECISÃO: Se a data for "Próxima quinta", calcule baseada em hoje (${todayStr}). Se não tiver ano, assuma o próximo ano coerente.
-      5. LINK: Em notícias ou listas, o "link" deve ser, se possível, para a página de inscrição/detalhes do evento. Se não achar, use o da fonte.
-
-      IGNORE: Eventos passados, Política Partidária, Religiosos puros, Entretenimento puro (Shows/Teatro), Festas Infantis.
+      REGRAS DE CONTEÚDO:
+      1. PRIORIDADE: Eventos de RH, Gestão de Gessoas, Tecnologia, Direito, Indústrias, Agronegócio, Networking de Empresários.
+      2. ANALISE: Por que esse evento é uma boa para um corretor de seguros? (Ex: "Muitos donos de indústria estarão lá", "Debate sobre saúde mental no trabalho atrai RHs").
+      3. SE JÁ PASSOU (${todayStr}), DESCARTE.
 
       JSON Saída:
       {
@@ -195,11 +191,12 @@ app.post('/api/search-source', async (req, res) => {
           "title": "Titulo Claro", 
           "date": "dd/mm/yyyy", 
           "location": "Local", 
-          "link": "URL mais direta possível", 
-          "analysis": "Pq é relevante?", 
-          "opportunity": "Networking / Conteúdo / Vendas" 
+          "link": "URL direta", 
+          "analysis": "Breve contexto do evento", 
+          "opportunity": "Networking / Leads / Parceria",
+          "insurance_relevance": "Explicação curta do PORQUÊ é bom para vender seguros"
         }],
-        "debug_summary": "Encontrados X eventos futuros. Y descartados por data antiga."
+        "debug_summary": "Encontrados X eventos futuros..."
       }
       
       Texto para análise:
@@ -222,8 +219,14 @@ app.post('/api/search-source', async (req, res) => {
     const result = JSON.parse(cleanText || '{ "events": [], "debug_summary": "Erro no parse" }');
 
     // Tratamento para caso a IA devolva array direto ou objeto
-    const events = Array.isArray(result) ? result : (result.events || []);
+    let events = Array.isArray(result) ? result : (result.events || []);
     const debugInfo = result.debug_summary || "Sem info";
+
+    // Mapeia o campo snake_case do JSON para o camelCase do TypeScript
+    events = events.map(e => ({
+      ...e,
+      insuranceRelevance: e.insurance_relevance || e.insuranceRelevance || "Sem explicação específica."
+    }));
 
     console.log(`✅ ${sourceName}: ${events.length} eventos. Debug: ${debugInfo}`);
     res.json({ events, debug: debugInfo });

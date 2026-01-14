@@ -12,23 +12,23 @@ const SOURCES = [
   {
     id: 'google_search',
     name: 'Google Search (Portais)',
-    url: 'eventos de negócios networking campinas palestras workshops',
+    url: 'eventos empresariais negócios campinas congresso simpósio networking tecnologia',
     mode: 'search' as const
   },
   {
     id: 'google_agenda',
     name: 'Google Search (Agendas)',
-    url: 'agenda eventos negócios campinas inscrições abertas',
+    url: 'agenda eventos campinas 2024 2025 negócios acic ciesp forum',
     mode: 'search' as const
   },
   { id: 'sympla_palestras', name: 'Sympla (Palestras)', url: 'https://www.sympla.com.br/eventos/campinas-sp/congressos-e-palestras', mode: 'scrape' as const },
   { id: 'sympla_network', name: 'Sympla (Networking)', url: 'https://www.sympla.com.br/eventos/campinas-sp?s=networking', mode: 'scrape' as const },
   { id: 'eventbrite', name: 'Eventbrite', url: 'https://www.eventbrite.com.br/d/brazil--campinas/business--events/', mode: 'scrape' as const },
   { id: 'meetup', name: 'Meetup', url: 'https://www.meetup.com/find/?location=br--Campinas&source=EVENTS&categoryId=career-business', mode: 'scrape' as const },
+  { id: 'hr_events', name: 'Eventos RH', url: 'https://www.google.com/search?q=eventos+recursos+humanos+campinas+2024', mode: 'search' as const },
   { id: 'ciesp', name: 'CIESP', url: 'http://www.ciespcampinas.org.br/eventos/', mode: 'scrape' as const },
   { id: 'acic', name: 'ACIC', url: 'https://acicampinas.com.br/eventos/', mode: 'scrape' as const },
-  { id: 'campinastech', name: 'Campinas Tech', url: 'https://campinastech.com.br/eventos/', mode: 'scrape' as const },
-  { id: 'hora', name: 'Notícias (Hora Campinas)', url: 'https://horacampinas.com.br/categoria/economia/', mode: 'scrape' as const }
+  { id: 'campinastech', name: 'Campinas Tech', url: 'https://campinastech.com.br/eventos/', mode: 'scrape' as const }
 ];
 
 interface SourceStatus {
@@ -131,10 +131,11 @@ function App() {
 
     autoTable(doc, {
       startY: 32,
-      head: [['Data', 'Evento', 'Local', 'Link', 'Oportunidade']],
-      body: events.map(e => [e.date, e.title, e.location, e.link, e.opportunity]),
+      head: [['Data', 'Evento', 'Local', 'Seguros', 'Análise']],
+      body: events.map(e => [e.date, e.title, e.location, e.insuranceRelevance, e.opportunity]),
       headStyles: { fillColor: [37, 99, 235] },
-      styles: { fontSize: 9, cellPadding: 4 },
+      styles: { fontSize: 8, cellPadding: 3 },
+      columnStyles: { 3: { cellWidth: 60 }, 4: { cellWidth: 50 } }
     });
     doc.save('relatorio-eventos-b2b.pdf');
   };
@@ -154,10 +155,10 @@ function App() {
           <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-8 animate-fade-in-up">
             <div className="max-w-2xl space-y-4">
               <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight sm:text-5xl">
-                Encontre oportunidades de negócios.
+                Leads de Seguros em Campinas.
               </h2>
               <p className="text-lg text-slate-600">
-                O sistema varre a web (Google + 8 Fontes) em paralelo para encontrar networking qualificado em Campinas.
+                Encontre eventos estratégicos para prospecção de seguros empresariais, saúde e vida.
               </p>
             </div>
 
@@ -334,8 +335,8 @@ function App() {
                         <th className="px-6 py-4 w-32">Data</th>
                         <th className="px-6 py-4">Evento</th>
                         <th className="px-6 py-4">Local</th>
-                        <th className="px-6 py-4">Link</th>
-                        <th className="px-6 py-4 w-1/4">Estratégia</th>
+                        <th className="px-6 py-4">Relevância Seguros</th>
+                        <th className="px-6 py-4">Estratégia</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -344,10 +345,8 @@ function App() {
                           <td className="px-6 py-4 font-medium text-slate-900 whitespace-nowrap">{event.date}</td>
                           <td className="px-6 py-4 font-semibold text-slate-800">{event.title}</td>
                           <td className="px-6 py-4">{event.location}</td>
-                          <td className="px-6 py-4">
-                            <a href={event.link} target="_blank" className="text-blue-600 hover:underline truncate block max-w-[200px]">
-                              Inscrição
-                            </a>
+                          <td className="px-6 py-4 text-xs font-medium text-blue-700 bg-blue-50/50">
+                            {event.insuranceRelevance}
                           </td>
                           <td className="px-6 py-4">
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
